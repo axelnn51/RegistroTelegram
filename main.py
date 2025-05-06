@@ -1,18 +1,17 @@
-import logging
+import os
+import json
 from telegram.ext import Updater, MessageHandler, Filters
 import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# ACTIVAR LOGS PARA VER ERRORES EN REPLIT
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+# CONFIGURACIÓN DEL BOT
+TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 
-# CONFIGURA TU TOKEN AQUÍ (manténlo privado)
-TELEGRAM_TOKEN = "7758578589:AAGH3mCc7PF1huQAkVaET5Ezw-8zluz8NEY"  # ✅ Reemplaza si lo cambias
-
-# GOOGLE SHEETS
+# CONFIGURACIÓN GOOGLE SHEETS
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-CREDS = ServiceAccountCredentials.from_json_keyfile_name("bot-registro-ventas-458920-1193064cb25c.json", SCOPE)
+json_creds = json.loads(os.environ["GOOGLE_CREDS_JSON"])
+CREDS = ServiceAccountCredentials.from_json_keyfile_dict(json_creds, SCOPE)
 client = gspread.authorize(CREDS)
 sheet = client.open("Registro de Ventas").sheet1
 
@@ -24,9 +23,6 @@ def procesar_mensaje(update, context):
 
     try:
         partes = texto.split()
-        if len(partes) < 3:
-            raise ValueError("Faltan partes del mensaje.")
-
         producto = partes[0]
         precio = partes[1]
         metodo_pago = partes[2]
@@ -34,17 +30,16 @@ def procesar_mensaje(update, context):
         sheet.append_row(fila)
         update.message.reply_text("✅ Registrado con éxito.")
     except Exception as e:
-        update.message.reply_text("❌ Formato inválido. Usa: Producto Precio MétodoDePago")
-        logging.error(f"Error procesando mensaje: {e}")
+        update.message.reply_text("❌ Usa: Producto Precio MetodoPago")
+        print(f"Error: {e}")
 
 def main():
-    print("Iniciando bot...")
     updater = Updater(TELEGRAM_TOKEN, use_context=True)
     dp = updater.dispatcher
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, procesar_mensaje))
     updater.start_polling()
-    print("Bot esperando mensajes...")
     updater.idle()
 
 if __name__ == '__main__':
     main()
+
